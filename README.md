@@ -16,11 +16,13 @@ Designed for 64x32 LED matrix displays.
 
 ## Install
 
-From the MLB-LED-Scoreboard installation directory, install this repository into the same Python environment used by the scoreboard:
+MLB-LED-Scoreboard creates a virtual environment at `venv/`. From the root of your `mlb-led-scoreboard` installation, install the plugin into that environment:
 
 ```bash
-python3 -m pip install git+https://github.com/MorgulWWIV/mlb-scoreboard-schedule.git
+sudo ./venv/bin/pip install "git+https://github.com/MorgulWWIV/mlb-scoreboard-schedule.git"
 ```
+
+Do not use the system `pip` command; Raspberry Pi OS may report an `externally-managed-environment` error. The scoreboard's documented plugin install method uses its own `venv/bin/pip`.
 
 Restart MLB-LED-Scoreboard after installing.
 

@@ -25,7 +25,7 @@ TEAM_IDS = {
 }
 TEAM_ABBR = {team_id: abbr for abbr, team_id in TEAM_IDS.items()}
 
-# A tiny 3x5 font keeps a full matchup and start time readable on 64 pixels.
+# The header uses a 3x5 font; game details use a compact 2x3 font.
 FONT = {
     "0": ("111", "101", "101", "101", "111"),
     "1": ("010", "110", "010", "010", "111"),
@@ -71,6 +71,12 @@ FONT = {
     " ": ("000", "000", "000", "000", "000"),
 }
 
+
+# Downsample the 3x5 glyphs to a compact 2x3 set for the scrolling game details.
+SMALL_FONT = {
+    char: tuple(row[0] + row[2] for row in (glyph[0], glyph[2], glyph[4]))
+    for char, glyph in FONT.items()
+}
 
 class Config(api.PluginConfig):
     def __init__(self, base: api.MLBConfig) -> None:
@@ -167,7 +173,7 @@ class Data(api.PluginData):
 
 class Renderer(api.PluginRenderer["Data"]):
     HEADER_HEIGHT = 7
-    ROW_HEIGHT = 11
+    ROW_HEIGHT = 8
     BOTTOM_MARGIN = 1
 
     def __init__(self, config: Config, layout: api.Layout, colors: api.Color) -> None:
@@ -200,8 +206,8 @@ class Renderer(api.PluginRenderer["Data"]):
 
         canvas.Fill(self.background.red, self.background.green, self.background.blue)
 
-        title = "ALL MLB GAMES" if self.config.mode == "all" else f"{self.config.team} GAMES"
-        self._draw_text(canvas, title, 0, 0, self.header_rgb)
+        # Keep the heading fixed while only the game list scrolls.
+        self._draw_text(canvas, "UPCOMING GAMES", 0, 0, self.header_rgb)
 
         if data.last_error and not data.games:
             self._draw_text(canvas, "DATA UNAVAILABLE", 0, 12, (255, 70, 70))
@@ -223,8 +229,27 @@ class Renderer(api.PluginRenderer["Data"]):
         for index, (matchup, game_time) in enumerate(rows):
             y = self.HEADER_HEIGHT + index * self.ROW_HEIGHT - self.offset
             if y < self.layout.height and y + 10 > self.HEADER_HEIGHT:
-                self._draw_text(canvas, matchup, 0, y, self.text_rgb)
-                self._draw_text(canvas, game_time, 0, y + 5, self.header_rgb)
+                self._draw_small_text(canvas, matchup, 0, y, self.text_rgb)
+                self._draw_small_text(canvas, game_time, 0, y + 4, self.header_rgb)
+
+    @staticmethod
+    def _draw_small_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int]) -> None:
+        red, green, blue = rgb
+        cursor_x = x
+        for char in text.upper():
+            glyph = SMALL_FONT.get(char, SMALL_FONT[" "])
+            for row_index, pattern in enumerate(glyph):
+                py = y + row_index
+                # Clip game text below the fixed header.
+                if py < Renderer.HEADER_HEIGHT or py >= canvas.height:
+                    continue
+                for column_index, pixel in enumerate(pattern):
+                    px = cursor_x + column_index
+                    if pixel == "1" and 0 <= px < canvas.width:
+                        canvas.SetPixel(px, py, red, green, blue)
+            cursor_x += 3
+            if cursor_x >= canvas.width:
+                break
 
     @staticmethod
     def _draw_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int]) -> None:

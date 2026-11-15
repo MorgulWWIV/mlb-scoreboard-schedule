@@ -167,8 +167,10 @@ class Data(api.PluginData):
 
 class Renderer(api.PluginRenderer["Data"]):
     HEADER_HEIGHT = 7
-    ROW_HEIGHT = 14
     BOTTOM_MARGIN = 1
+    DISPLAY_SECONDS = 2.0
+    TRANSITION_SECONDS = 0.8
+    FRAME_SECONDS = 0.05
 
     def __init__(self, config: Config, layout: api.Layout, colors: api.Color) -> None:
         self.config = config
@@ -176,6 +178,9 @@ class Renderer(api.PluginRenderer["Data"]):
         self.colors = colors
         self.background = colors.graphics_color("default.background")
         self.offset = 0
+        self.game_index = 0
+        self.phase = "hold"
+        self.phase_started = time.monotonic()
         self.last_signature: tuple | None = None
         self.header_rgb = (255, 170, 0)
         self.text_rgb = (235, 245, 255)
@@ -184,10 +189,13 @@ class Renderer(api.PluginRenderer["Data"]):
 
     def wait_time(self) -> float:
         # Increase the frame delay by 50% for a gentler scroll.
-        return self.config.scrolling_speed * 1.5
+        return self.FRAME_SECONDS
 
     def reset(self) -> None:
         self.offset = 0
+        self.game_index = 0
+        self.phase = "hold"
+        self.phase_started = time.monotonic()
         self.last_signature = None
 
     def render(
@@ -198,33 +206,60 @@ class Renderer(api.PluginRenderer["Data"]):
         scrolling_text_pos: int,
     ) -> None:
         if data.last_signature != self.last_signature:
-            self.offset = 0
+            self.game_index = 0
+            self.phase = "hold"
+            self.phase_started = time.monotonic()
             self.last_signature = data.last_signature
 
-        # Force unused pixels to true black (RGB 0, 0, 0).
         canvas.Fill(0, 0, 0)
-
-        # Keep the heading fixed while only the game list scrolls.
-        self._draw_text(canvas, "UPCOMING GAMES", 11, 0, self.header_rgb)
+        header = "UPCOMING GAMES"
+        header_x = max(0, (canvas.width - (len(header) * 4 - 1)) // 2)
+        self._draw_text(canvas, header, header_x, 0, self.header_rgb)
 
         if data.last_error and not data.games:
-            self._draw_text(canvas, "DATA UNAVAILABLE", 0, 12, (255, 70, 70))
+            message = "DATA UNAVAILABLE"
+            self._draw_text(canvas, message, max(0, (canvas.width - (len(message) * 4 - 1)) // 2), 14, (255, 70, 70), clip_top=self.HEADER_HEIGHT)
             return
 
         if not data.games:
-            self._draw_text(canvas, "NO UPCOMING GAMES", 0, 12, self.text_rgb)
+            message = "NO UPCOMING GAMES"
+            self._draw_text(canvas, message, max(0, (canvas.width - (len(message) * 4 - 1)) // 2), 14, self.text_rgb, clip_top=self.HEADER_HEIGHT)
             return
 
-        viewport_height = self.layout.height - self.HEADER_HEIGHT - self.BOTTOM_MARGIN
-        content_height = len(data.games) * self.ROW_HEIGHT
-        max_offset = max(0, content_height - viewport_height)
-        self.offset = min(self.offset + 1, max_offset)
+        now = time.monotonic()
+        elapsed = now - self.phase_started
+        if self.phase == "hold" and elapsed >= self.DISPLAY_SECONDS and self.game_index < len(data.games) - 1:
+            self.phase = "transition"
+            self.phase_started = now
+            elapsed = 0.0
+        elif self.phase == "transition" and elapsed >= self.TRANSITION_SECONDS:
+            self.game_index += 1
+            self.phase = "hold"
+            self.phase_started = now
+            elapsed = 0.0
 
-        for index, game in enumerate(data.games):
-            y = self.HEADER_HEIGHT + index * self.ROW_HEIGHT - self.offset
-            if y < self.layout.height and y + 11 > self.HEADER_HEIGHT:
-                self._draw_text(canvas, f'{game["away"]} @ {game["home"]}', 0, y, self.matchup_rgb, clip_top=self.HEADER_HEIGHT)
-                self._draw_text(canvas, f'{game["date"]} - {game["time"]}', 0, y + 6, self.date_rgb, clip_top=self.HEADER_HEIGHT)
+        viewport_top = self.HEADER_HEIGHT
+        viewport_height = canvas.height - viewport_top - self.BOTTOM_MARGIN
+        group_height = 11
+        base_y = viewport_top + max(0, (viewport_height - group_height) // 2)
+
+        current = data.games[self.game_index]
+        if self.phase == "hold":
+            self._draw_game(canvas, current, base_y)
+        else:
+            progress = min(1.0, elapsed / self.TRANSITION_SECONDS)
+            next_game = data.games[self.game_index + 1]
+            travel = viewport_height
+            self._draw_game(canvas, current, base_y - int(progress * travel))
+            self._draw_game(canvas, next_game, base_y + int((1.0 - progress) * travel))
+
+    def _draw_game(self, canvas: "Canvas", game: dict, y: int) -> None:
+        matchup = f'{game["away"]} @ {game["home"]}'
+        date_time = f'{game["date"]} - {game["time"]}'
+        matchup_x = max(0, (canvas.width - (len(matchup) * 4 - 1)) // 2)
+        date_x = max(0, (canvas.width - (len(date_time) * 4 - 1)) // 2)
+        self._draw_text(canvas, matchup, matchup_x, y, self.matchup_rgb, clip_top=self.HEADER_HEIGHT)
+        self._draw_text(canvas, date_time, date_x, y + 6, self.date_rgb, clip_top=self.HEADER_HEIGHT)
 
     @staticmethod
     def _draw_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int], clip_top: int = 0) -> None:

@@ -1,0 +1,11 @@
+{
+  "plugins": {
+    "mlb_team_schedule": {
+      "mode": "all",
+      "team": "NYY",
+      "days_ahead": 14,
+      "max_games": 60,
+      "refresh_minutes": 30
+    }
+  }
+}

@@ -81,7 +81,7 @@ class Config(api.PluginConfig):
         team = str(raw.get("team", "NYY")).upper()
         self.team = team if team in TEAM_IDS else "NYY"
 
-        self.days_ahead = _bounded_int(raw.get("days_ahead", 14), 14, 1, 30)
+        self.days_ahead = _bounded_int(raw.get("days_ahead", 14), 14, 1, 365)
         self.max_games = _bounded_int(raw.get("max_games", 60), 60, 1, 200)
         self.refresh_seconds = _bounded_int(raw.get("refresh_minutes", 30), 30, 5, 240) * 60
         self.scrolling_speed = max(0.03, float(base.scrolling_speed))

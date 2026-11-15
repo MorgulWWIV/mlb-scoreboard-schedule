@@ -173,7 +173,7 @@ class Data(api.PluginData):
 
 class Renderer(api.PluginRenderer["Data"]):
     HEADER_HEIGHT = 7
-    ROW_HEIGHT = 8
+    ROW_HEIGHT = 5
     BOTTOM_MARGIN = 1
 
     def __init__(self, config: Config, layout: api.Layout, colors: api.Color) -> None:
@@ -218,7 +218,7 @@ class Renderer(api.PluginRenderer["Data"]):
             return
 
         rows = [
-            (f'{game["date"]} {game["away"]}@{game["home"]}', game["time"])
+            f'{game["date"]} {game["away"]}@{game["home"]} {game["time"]}'
             for game in data.games
         ]
         viewport_height = self.layout.height - self.HEADER_HEIGHT - self.BOTTOM_MARGIN
@@ -226,11 +226,10 @@ class Renderer(api.PluginRenderer["Data"]):
         max_offset = max(0, content_height - viewport_height)
         self.offset = min(self.offset + 1, max_offset)
 
-        for index, (matchup, game_time) in enumerate(rows):
+        for index, game_line in enumerate(rows):
             y = self.HEADER_HEIGHT + index * self.ROW_HEIGHT - self.offset
-            if y < self.layout.height and y + 10 > self.HEADER_HEIGHT:
-                self._draw_small_text(canvas, matchup, 0, y, self.text_rgb)
-                self._draw_small_text(canvas, game_time, 0, y + 4, self.header_rgb)
+            if y < self.layout.height and y + 3 > self.HEADER_HEIGHT:
+                self._draw_small_text(canvas, game_line, 0, y, self.text_rgb)
 
     @staticmethod
     def _draw_small_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int]) -> None:

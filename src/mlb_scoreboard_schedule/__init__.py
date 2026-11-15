@@ -25,7 +25,7 @@ TEAM_IDS = {
 }
 TEAM_ABBR = {team_id: abbr for abbr, team_id in TEAM_IDS.items()}
 
-# The header uses a 3x5 font; game details use a compact 2x3 font.
+# Header and game details use the original 3x5 font.
 FONT = {
     "0": ("111", "101", "101", "101", "111"),
     "1": ("010", "110", "010", "010", "111"),
@@ -71,12 +71,6 @@ FONT = {
     " ": ("000", "000", "000", "000", "000"),
 }
 
-
-# Downsample the 3x5 glyphs to a compact 2x3 set for the scrolling game details.
-SMALL_FONT = {
-    char: tuple(row[0] + row[2] for row in (glyph[0], glyph[2], glyph[4]))
-    for char, glyph in FONT.items()
-}
 
 class Config(api.PluginConfig):
     def __init__(self, base: api.MLBConfig) -> None:
@@ -173,7 +167,7 @@ class Data(api.PluginData):
 
 class Renderer(api.PluginRenderer["Data"]):
     HEADER_HEIGHT = 7
-    ROW_HEIGHT = 5
+    ROW_HEIGHT = 11
     BOTTOM_MARGIN = 1
 
     def __init__(self, config: Config, layout: api.Layout, colors: api.Color) -> None:
@@ -183,8 +177,9 @@ class Renderer(api.PluginRenderer["Data"]):
         self.background = colors.graphics_color("default.background")
         self.offset = 0
         self.last_signature: tuple | None = None
-        self.text_rgb = (235, 245, 255)
         self.header_rgb = (255, 170, 0)
+        self.matchup_rgb = (255, 0, 0)
+        self.date_rgb = (0, 255, 0)
 
     def wait_time(self) -> float:
         return self.config.scrolling_speed
@@ -217,38 +212,16 @@ class Renderer(api.PluginRenderer["Data"]):
             self._draw_text(canvas, "NO UPCOMING GAMES", 0, 12, self.text_rgb)
             return
 
-        rows = [
-            f'{game["date"]} {game["away"]}@{game["home"]} {game["time"]}'
-            for game in data.games
-        ]
         viewport_height = self.layout.height - self.HEADER_HEIGHT - self.BOTTOM_MARGIN
-        content_height = len(rows) * self.ROW_HEIGHT
+        content_height = len(data.games) * self.ROW_HEIGHT
         max_offset = max(0, content_height - viewport_height)
         self.offset = min(self.offset + 1, max_offset)
 
-        for index, game_line in enumerate(rows):
+        for index, game in enumerate(data.games):
             y = self.HEADER_HEIGHT + index * self.ROW_HEIGHT - self.offset
-            if y < self.layout.height and y + 3 > self.HEADER_HEIGHT:
-                self._draw_small_text(canvas, game_line, 0, y, self.text_rgb)
-
-    @staticmethod
-    def _draw_small_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int]) -> None:
-        red, green, blue = rgb
-        cursor_x = x
-        for char in text.upper():
-            glyph = SMALL_FONT.get(char, SMALL_FONT[" "])
-            for row_index, pattern in enumerate(glyph):
-                py = y + row_index
-                # Clip game text below the fixed header.
-                if py < Renderer.HEADER_HEIGHT or py >= canvas.height:
-                    continue
-                for column_index, pixel in enumerate(pattern):
-                    px = cursor_x + column_index
-                    if pixel == "1" and 0 <= px < canvas.width:
-                        canvas.SetPixel(px, py, red, green, blue)
-            cursor_x += 3
-            if cursor_x >= canvas.width:
-                break
+            if y < self.layout.height and y + 5 > self.HEADER_HEIGHT:
+                self._draw_text(canvas, f'{game["away"]} @ {game["home"]}', 0, y, self.matchup_rgb)
+                self._draw_text(canvas, f'{game["date"]} - {game["time"]}', 0, y + 6, self.date_rgb)
 
     @staticmethod
     def _draw_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int]) -> None:

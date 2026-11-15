@@ -178,6 +178,7 @@ class Renderer(api.PluginRenderer["Data"]):
         self.offset = 0
         self.last_signature: tuple | None = None
         self.header_rgb = (255, 170, 0)
+        self.text_rgb = (235, 245, 255)
         self.matchup_rgb = (255, 0, 0)
         self.date_rgb = (0, 255, 0)
 

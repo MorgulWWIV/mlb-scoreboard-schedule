@@ -167,7 +167,7 @@ class Data(api.PluginData):
 
 class Renderer(api.PluginRenderer["Data"]):
     HEADER_HEIGHT = 7
-    ROW_HEIGHT = 11
+    ROW_HEIGHT = 14
     BOTTOM_MARGIN = 1
 
     def __init__(self, config: Config, layout: api.Layout, colors: api.Color) -> None:
@@ -183,7 +183,8 @@ class Renderer(api.PluginRenderer["Data"]):
         self.date_rgb = (0, 255, 0)
 
     def wait_time(self) -> float:
-        return self.config.scrolling_speed
+        # Increase the frame delay by 50% for a gentler scroll.
+        return self.config.scrolling_speed * 1.5
 
     def reset(self) -> None:
         self.offset = 0
@@ -221,7 +222,7 @@ class Renderer(api.PluginRenderer["Data"]):
 
         for index, game in enumerate(data.games):
             y = self.HEADER_HEIGHT + index * self.ROW_HEIGHT - self.offset
-            if y < self.layout.height and y + 5 > self.HEADER_HEIGHT:
+            if y < self.layout.height and y + 11 > self.HEADER_HEIGHT:
                 self._draw_text(canvas, f'{game["away"]} @ {game["home"]}', 0, y, self.matchup_rgb, clip_top=self.HEADER_HEIGHT)
                 self._draw_text(canvas, f'{game["date"]} - {game["time"]}', 0, y + 6, self.date_rgb, clip_top=self.HEADER_HEIGHT)
 

@@ -50,7 +50,7 @@ Add the plugin under the top-level `plugins` object in `config.json`:
 |---|---|---:|---|
 | `mode` | `all`, `team` | `all` | Show all MLB games or only one team's games |
 | `team` | MLB abbreviation | `NYY` | Team to show when mode is `team` |
-| `days_ahead` | 1–30 | `14` | How far ahead to request the schedule |
+| `days_ahead` | 1–365 | `14` | How far ahead to request the schedule |
 | `max_games` | 1–200 | `60` | Maximum games displayed |
 | `refresh_minutes` | 5–240 | `30` | Schedule refresh interval |
 

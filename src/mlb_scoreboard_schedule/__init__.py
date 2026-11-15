@@ -144,7 +144,7 @@ class Data(api.PluginData):
 
                     games.append({
                         "date": game_time.strftime("%m/%d"),
-                        "time": game_time.strftime("%H:%M"),
+                        "time": game_time.strftime("%I:%M %p").lstrip("0"),
                         "away": away_abbr,
                         "home": home_abbr,
                         "game_pk": game.get("gamePk"),
@@ -203,7 +203,7 @@ class Renderer(api.PluginRenderer["Data"]):
         canvas.Fill(self.background.red, self.background.green, self.background.blue)
 
         # Keep the heading fixed while only the game list scrolls.
-        self._draw_text(canvas, "UPCOMING GAMES", 0, 0, self.header_rgb)
+        self._draw_text(canvas, "UPCOMING GAMES", 11, 0, self.header_rgb)
 
         if data.last_error and not data.games:
             self._draw_text(canvas, "DATA UNAVAILABLE", 0, 12, (255, 70, 70))
@@ -221,18 +221,18 @@ class Renderer(api.PluginRenderer["Data"]):
         for index, game in enumerate(data.games):
             y = self.HEADER_HEIGHT + index * self.ROW_HEIGHT - self.offset
             if y < self.layout.height and y + 5 > self.HEADER_HEIGHT:
-                self._draw_text(canvas, f'{game["away"]} @ {game["home"]}', 0, y, self.matchup_rgb)
-                self._draw_text(canvas, f'{game["date"]} - {game["time"]}', 0, y + 6, self.date_rgb)
+                self._draw_text(canvas, f'{game["away"]} @ {game["home"]}', 0, y, self.matchup_rgb, clip_top=self.HEADER_HEIGHT)
+                self._draw_text(canvas, f'{game["date"]} - {game["time"]}', 0, y + 6, self.date_rgb, clip_top=self.HEADER_HEIGHT)
 
     @staticmethod
-    def _draw_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int]) -> None:
+    def _draw_text(canvas: "Canvas", text: str, x: int, y: int, rgb: tuple[int, int, int], clip_top: int = 0) -> None:
         red, green, blue = rgb
         cursor_x = x
         for char in text.upper():
             glyph = FONT.get(char, FONT[" "])
             for row_index, pattern in enumerate(glyph):
                 py = y + row_index
-                if py < 0 or py >= canvas.height:
+                if py < clip_top or py >= canvas.height:
                     continue
                 for column_index, pixel in enumerate(pattern):
                     px = cursor_x + column_index

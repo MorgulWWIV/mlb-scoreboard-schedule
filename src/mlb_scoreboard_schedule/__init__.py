@@ -200,7 +200,8 @@ class Renderer(api.PluginRenderer["Data"]):
             self.offset = 0
             self.last_signature = data.last_signature
 
-        canvas.Fill(self.background.red, self.background.green, self.background.blue)
+        # Force unused pixels to true black (RGB 0, 0, 0).
+        canvas.Fill(0, 0, 0)
 
         # Keep the heading fixed while only the game list scrolls.
         self._draw_text(canvas, "UPCOMING GAMES", 11, 0, self.header_rgb)
